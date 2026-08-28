@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+/// Таймфреймы CoinGecko OHLC (гранулярность задаётся параметром days)
+enum CandleInterval {
+  M30 // days=1
+  H4  // days=2..30
+  D4  // days>=31
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+  refreshHash  String?  @map("refresh_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Symbol {
+  id           Int       @id @default(autoincrement())
+  coingeckoId  String    @unique @map("coingecko_id")
+  ticker       String
+  name         String
+  vsCurrency   String    @default("usd") @map("vs_currency")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  candles Candle[]
+
+  @@unique([ticker, vsCurrency])
+  @@index([isActive])
+  @@map("symbols")
+}
+
+model Candle {
+  symbolId  Int            @map("symbol_id")
+  interval  CandleInterval
+  openTime  DateTime       @map("open_time") @db.Timestamptz(3)
+  open      Decimal        @db.Decimal(20, 8)
+  high      Decimal        @db.Decimal(20, 8)
+  low       Decimal        @db.Decimal(20, 8)
+  close     Decimal        @db.Decimal(20, 8)
+  volume    Decimal?       @db.Decimal(30, 8)
+  source    String         @default("coingecko")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  @@id([symbolId, interval, openTime])
+  @@index([symbolId, interval, openTime(sort: Desc)])
+  @@index([openTime])
+  @@map("candles")
+}

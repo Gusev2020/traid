@@ -1,0 +1,19 @@
+---
+description: OpenAPI как единственный контракт. Запрет ручного API-клиента. После DTO — export spec.
+globs:
+  - backend/src/**/*.dto.ts
+  - backend/src/**/*.controller.ts
+  - frontend/src/shared/api/**
+  - frontend/openapi-ts.config.ts
+alwaysApply: false
+---
+
+# OpenAPI-контракт
+
+Единственный контракт REST: Swagger NestJS → `openapi.json` / `/docs-json` → `@hey-api/openapi-ts`.
+
+- DTO = валидация + спека: `@ApiProperty` / `@ApiPropertyOptional` с `example`. `class-validator` обязателен.
+- Изменил DTO или контроллер → `npm run openapi:export` в `backend/`. На фронте → `npm run api:generate`, затем `tsc --noEmit`.
+- Не описывать те же типы руками в `entities/` или `shared/api/` (кроме WS в `events.contract.ts` / Zod).
+- `generated/` в `.gitignore`. Генерация — `predev` / `prebuild`. CI падает, если контракт сломан.
+- WS OpenAPI не покрывает: Zod на входящие payload обязателен.

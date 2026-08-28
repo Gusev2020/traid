@@ -1,0 +1,29 @@
+---
+description: Слои NestJS (Controller/Service/Repository/Integration/Gateway), Swagger, deny-by-default auth.
+globs:
+  - backend/**/*.ts
+  - backend/**/*.prisma
+alwaysApply: false
+---
+
+# Backend
+
+Слои из ARCHITECTURE §4.1. Feature-модули не импортируют друг друга, кроме экспортированных сервисов.
+
+| Слой | Можно | Нельзя |
+|---|---|---|
+| Controller | HTTP, DTO, Swagger, mapping → response | бизнес-логика, Prisma |
+| Service | оркестрация, транзакции | `Request`/`Response`, HTTP-коды |
+| Repository | только Prisma | бизнес-правила |
+| Integration | внешний HTTP, кэш, retry | БД |
+| Gateway | WS транспорт | бизнес-логика (делегировать в Service) |
+
+- Каждый эндпоинт: `@ApiOperation`, `@ApiOkResponse`, error `@ApiResponse`. После изменения DTO — `npm run openapi:export`.
+- Денежные поля наружу — `string` (Decimal). Глобальный `JwtAuthGuard`: новый роут без `@Public()` защищён.
+- Исключения через `AllExceptionsFilter`, не `res.status()` в контроллере.
+- Тесты слоя в том же milestone (Jest). CoinGecko в тестах — только `nock`.
+
+```ts
+// ❌ Controller → prisma.candle.findMany()
+// ✅ Controller → CandlesService.getCandles(dto)
+```

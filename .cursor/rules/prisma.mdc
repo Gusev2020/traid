@@ -1,0 +1,17 @@
+---
+description: Prisma-схема, миграции, Decimal, композитный PK, запрет db push в прод-пути.
+globs:
+  - backend/prisma/**
+  - backend/src/**/*.repository.ts
+alwaysApply: false
+---
+
+# Prisma
+
+Схема — единственный источник истины для БД. Изменения только через `prisma migrate` (SQL в репо). Не `db push` как прод-путь. Не писать Prisma в Controller/Service.
+
+- `Candle`: PK `(symbolId, interval, openTime)` — идемпотентный upsert / `createMany({ skipDuplicates: true })`.
+- Цены — `Decimal(20,8)`, в JSON API — `string`. Время — `Timestamptz(3)`, UTC.
+- `CandleInterval` — enum (`M30`/`H4`/`D4`), не свободная строка.
+- Seed идемпотентный. Репозиторий — единственный слой с Prisma-типами.
+- postgres MCP не заменяет миграции и не пишет данные (`restricted`).

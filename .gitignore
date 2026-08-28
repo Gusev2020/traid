@@ -1,0 +1,10 @@
+.env
+.env.local
+.env.*.local
+*.pem
+node_modules/
+frontend/src/shared/api/generated/
+backend/openapi.json
+dist/
+.next/
+coverage/

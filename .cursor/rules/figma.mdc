@@ -1,0 +1,27 @@
+---
+description: Figma как источник дизайн-токенов. Не хардкодить цвета и spacing.
+globs:
+  - frontend/**/*.{ts,tsx,css}
+  - frontend/tailwind.config.ts
+alwaysApply: false
+---
+
+# Figma
+
+Макет: [Treyd UI Kit](https://www.figma.com/design/jAGbP5vebc57s09dqcvqkV/Treyd-Crypto-Trading-App-UI-Kit--Community-). File key: `jAGbP5vebc57s09dqcvqkV`.
+
+1. Есть `node-id` — сначала Figma MCP, потом вёрстка.
+2. Токен есть в `frontend/src/shared/config/design-tokens.json` → CSS-переменная. Нет → добавить в JSON, `tokens:build`, затем верстать.
+3. Ассеты качать MCP в `frontend/public/assets/`. Не base64, не выдуманные пути.
+
+Запреты: hex/rgb в компонентах; произвольный Tailwind, если есть шаг шкалы; правки `shared/ui/` под одну фичу; правки `shared/api/generated/**`.
+
+| Figma | Код |
+|---|---|
+| Color styles | `src/app/globals.css` |
+| Text styles | `fontSize` / `lineHeight` в `tailwind.config.ts` |
+| Radius | `--radius` |
+| Gap / padding | spacing × 4px |
+| Button, Card… | shadcn в `shared/ui/` |
+
+Макет тёмный по умолчанию: light → `:root`, dark → `.dark`.

@@ -1,0 +1,16 @@
+---
+description: Jest/Vitest, nock/MSW, пороги покрытия, запрет живого CoinGecko в CI.
+globs:
+  - "**/*.{spec,test,e2e-spec}.{ts,tsx}"
+alwaysApply: false
+---
+
+# Тесты
+
+Слой ROADMAP без зелёных тестов не закрыт. TDD — для сервисов, адаптеров, кэша, Zod-схем.
+
+**Backend (Jest):** моки `@golevelup/ts-jest`. HTTP наружу — только `nock`. Integration — Testcontainers PostgreSQL. E2E — Supertest. WS — `socket.io-client` против `app.listen()`. Coverage ≥80% на `src/modules/**` и `src/integrations/**`.
+
+**Frontend (Vitest):** RTL + `user-event`, environment `jsdom`. Запросы — MSW. `lightweight-charts` — `vi.mock`. Canvas не тестировать. Схемы Zod — отдельные unit-тесты на битый payload.
+
+Запрет: реальный CoinGecko, реальный JWT-секрет из prod, `expect(true).toBe(true)` как «покрытие».

@@ -1,0 +1,17 @@
+---
+description: FSD-импорты, запрет ручных API-типов, TanStack Query vs Zustand, shadcn только в shared/ui.
+globs:
+  - frontend/**/*.ts
+  - frontend/**/*.tsx
+alwaysApply: false
+---
+
+# Frontend
+
+Импорты только вниз: `app → pages → widgets → features → entities → shared`. Нарушение ломает `eslint-plugin-boundaries`. Public API слайса — `index.ts`.
+
+- Типы и вызовы REST — только `@/shared/api/generated`. Файл `client.ts` — единственный ручной слой (baseUrl, auth). Не править `generated/**`.
+- Серверный стейт — TanStack Query (`queryOptions` из генератора). Zustand — только UI (тема, панели).
+- REST-ответы Zod не дублировать. Zod обязателен: WS-payload, search params, env, `localStorage`.
+- shadcn — только `shared/ui/`. Доменные обёртки — `entities/*/ui/`. Цвета/отступы — CSS-переменные из токенов, не hex и не `p-[13px]`.
+- График (`lightweight-charts`) — Client Component в `widgets/`. Страница — Server Component + `prefetchQuery` + `HydrationBoundary`.

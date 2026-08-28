@@ -1,0 +1,18 @@
+---
+description: JWT, argon2, refresh cookie, throttling login, запрет секретов в бандле.
+globs:
+  - backend/src/modules/auth/**
+  - backend/src/common/guards/**
+  - frontend/src/features/auth-*/**
+  - frontend/src/shared/api/client.ts
+alwaysApply: false
+---
+
+# Security
+
+- Пароль — argon2. Access JWT HS256 TTL 15m (Bearer). Refresh TTL 7d, httpOnly Secure SameSite=Lax, в БД только hash (`User.refreshHash`).
+- `JwtAuthGuard` глобально (`APP_GUARD`). Публичное — только `@Public()`. Роли — `RolesGuard` + `@Roles(ADMIN)`.
+- `POST /auth/login` — `@Throttle` 3/мин. `/health` — `@SkipThrottle()`.
+- WS: токен в `handshake.auth.token`, проверка в `handleConnection`. Не логировать `authorization`, cookie, password, apiKey (Pino redact).
+- На клиенте только `NEXT_PUBLIC_*`. Access в памяти/интерцепторе, не в `localStorage` если можно cookie-only для refresh. 401 → один retry через `/auth/refresh`.
+- Не коммитить `.env`, JWT-секреты, `COINGECKO_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`.

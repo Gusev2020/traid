@@ -1,0 +1,15 @@
+---
+description: Глобальные запреты, порядок слоёв ROADMAP, MCP и DoD. Всегда в контексте.
+alwaysApply: true
+---
+
+# Проект
+
+Источник истины: `ARCHITECTURE.md`, порядок работ: `ROADMAP.md`, индекс агента: `AGENTS.md`.
+
+- Слои строго: backend B1→B4, затем frontend F1→F4, затем I1–I4. Frontend не стартовать, пока B1–B4 не зелёные.
+- Слой закрыт только при полном DoD: фича + unit + integration/e2e + lint + `tsc --noEmit` + тесты локально. Backend: Swagger + `/health`. Frontend: рендер + TanStack Query + Zod (где применимо).
+- Не переходить к следующему слою при красных тестах. Недостающая backend-фича на фронте → вернуться в backend-слой, дописать и снова закрыть DoD, затем `openapi:export`.
+- Перед кодом NestJS / Next.js / Prisma / TanStack Query — Context7 MCP, не API из памяти.
+- postgres MCP только SELECT (`restricted`). Схема — `backend/prisma/schema.prisma`. Не коммитить `.env`, секреты, `frontend/src/shared/api/generated/**`.
+- Ответы на русском, термины на английском. Линтер и CI — арбитр; не отключать правила ESLint точечно без причины в PR.
