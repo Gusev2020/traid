@@ -1,3 +1,9 @@
+/**
+ * Unit-тест Zod-валидации env (fail-fast).
+ *
+ * Проверяем ключевое требование B1: без DATABASE_URL приложение не стартует.
+ * Unit-тест быстрый — не поднимает Nest, только вызывает validateEnv().
+ */
 import { validateEnv } from './env.validation';
 
 const valid = {
@@ -11,7 +17,7 @@ describe('validateEnv', () => {
   it('parses required variables', () => {
     const env = validateEnv(valid);
     expect(env.DATABASE_URL).toContain('postgresql://');
-    expect(env.PORT).toBe(3001);
+    expect(env.PORT).toBe(3001); // z.coerce.number превратил строку "3001" в number
   });
 
   it('fails fast when DATABASE_URL is missing', () => {

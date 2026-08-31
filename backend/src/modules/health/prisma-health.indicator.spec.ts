@@ -1,3 +1,10 @@
+/**
+ * Unit-тест PrismaHealthIndicator.
+ *
+ * Проверяем два сценария:
+ *   1. ping успешен → { database: { status: 'up' } }
+ *   2. ping упал → HealthCheckError (Terminus вернёт HTTP 503)
+ */
 import { PrismaService } from '../../prisma/prisma.service';
 import { PrismaHealthIndicator } from './prisma-health.indicator';
 

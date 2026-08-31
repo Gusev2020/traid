@@ -1,3 +1,15 @@
+/**
+ * E2E-тест слоя B1 — проверяет, что всё приложение собирается и отвечает.
+ *
+ * Отличие от unit-тестов:
+ *   - Поднимается реальное Nest-приложение (AppModule + configureApp)
+ *   - HTTP-запросы через supertest (как настоящий клиент)
+ *
+ * PrismaService подменён моком — e2e не требует живой Postgres,
+ * но проверяет, что health-цепочка доходит до prisma.ping().
+ *
+ * Запуск: npm run test:e2e
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -8,6 +20,8 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('Bootstrap (e2e)', () => {
   let app: INestApplication<App>;
+
+  // Мок PrismaService — имитируем БД без реального Postgres
   const prisma = {
     ping: jest.fn().mockResolvedValue(undefined),
     $connect: jest.fn().mockResolvedValue(undefined),
@@ -26,12 +40,13 @@ describe('Bootstrap (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      // overrideProvider — подменяем реальный PrismaService на мок
       .overrideProvider(PrismaService)
       .useValue(prisma)
       .compile();
 
     app = moduleFixture.createNestApplication();
-    configureApp(app);
+    configureApp(app); // те же глобальные настройки, что в main.ts
     await app.init();
   });
 

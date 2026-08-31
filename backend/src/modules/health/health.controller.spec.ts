@@ -1,3 +1,9 @@
+/**
+ * Unit-тест HealthController.
+ *
+ * Зависимости (HealthCheckService, индикаторы) подменены моками —
+ * тестируем только логику контроллера: «вызывает ли он оба индикатора?»
+ */
 import { HealthCheckService, MemoryHealthIndicator } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 import { PrismaHealthIndicator } from './prisma-health.indicator';
@@ -27,6 +33,8 @@ describe('HealthController', () => {
     await expect(controller.check()).resolves.toEqual({ status: 'ok' });
     expect(health.check).toHaveBeenCalledTimes(1);
     expect(indicators).toHaveLength(2);
+
+    // Выполняем функции-индикаторы, которые передал контроллер
     await Promise.all(indicators.map((fn) => fn()));
     expect(prismaIndicator.pingCheck).toHaveBeenCalledWith('database', {
       timeout: 1500,

@@ -1,58 +1,94 @@
+// =============================================================================
+// Prisma Schema — описание структуры PostgreSQL базы данных
+// =============================================================================
+//
+// Этот файл — «источник истины» для схемы БД:
+//   1. Описываем модели здесь (model User, Symbol, Candle)
+//   2. prisma migrate dev — генерирует SQL-миграцию
+//   3. prisma generate — генерирует TypeScript-клиент (@prisma/client)
+//
+// PrismaService в Nest extends PrismaClient — все методы ниже доступны как:
+//   prisma.symbol.findMany(), prisma.candle.upsert(...), prisma.user.create(...)
+//
+// Когда какая модель используется (ROADMAP):
+//   User   → B4 (JWT auth: register, login, refresh)
+//   Symbol → B1 seed, B2 REST GET /symbols, B3 CoinGecko sync
+//   Candle → B2 REST GET /candles, B3 backfill + cron sync
+// =============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // строка из traid/.env
 }
 
+// Роли пользователей — используется на B4 (AuthModule + RolesGuard)
 enum Role {
   USER
   ADMIN
 }
 
-/// Таймфреймы CoinGecko OHLC (гранулярность задаётся параметром days)
+/// Таймфреймы свечей. Соответствуют параметру `days` в CoinGecko OHLC API (B3):
+///   M30 — days=1  (30-минутные свечи)
+///   H4  — days=2..30 (4-часовые)
+///   D4  — days>=31 (4-дневные)
 enum CandleInterval {
   M30 // days=1
   H4  // days=2..30
   D4  // days>=31
 }
 
+// ---------------------------------------------------------------------------
+// User — аккаунты (B4: register/login/refresh/logout)
+// ---------------------------------------------------------------------------
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  passwordHash String   @map("password_hash") // argon2, никогда plain text
   role         Role     @default(USER)
-  refreshHash  String?  @map("refresh_hash")
+  refreshHash  String?  @map("refresh_hash") // хэш refresh-токена (httpOnly cookie)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@map("users")
+  @@map("users") // имя таблицы в Postgres — snake_case
 }
 
+// ---------------------------------------------------------------------------
+// Symbol — торговые пары (BTC/USD, ETH/USD...)
+// B1: seed.ts заполняет 5 символов
+// B2: GET /symbols, GET /symbols/:ticker
+// B3: CoinGecko sync обновляет lastSyncedAt
+// ---------------------------------------------------------------------------
 model Symbol {
   id           Int       @id @default(autoincrement())
-  coingeckoId  String    @unique @map("coingecko_id")
-  ticker       String
-  name         String
+  coingeckoId  String    @unique @map("coingecko_id") // ID в CoinGecko API: "bitcoin"
+  ticker       String // "BTC"
+  name         String // "Bitcoin"
   vsCurrency   String    @default("usd") @map("vs_currency")
   isActive     Boolean   @default(true) @map("is_active")
-  lastSyncedAt DateTime? @map("last_synced_at")
+  lastSyncedAt DateTime? @map("last_synced_at") // когда последний раз тянули свечи (B3)
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  candles Candle[]
+  candles Candle[] // one-to-many: у символа много свечей
 
-  @@unique([ticker, vsCurrency])
-  @@index([isActive])
+  @@unique([ticker, vsCurrency]) // один BTC/USD, не два
+  @@index([isActive]) // быстрый фильтр активных символов
   @@map("symbols")
 }
 
+// ---------------------------------------------------------------------------
+// Candle — OHLCV-свечи (Open, High, Low, Close, Volume)
+// B2: GET /candles, GET /candles/latest
+// B3: bulk upsert из CoinGecko
+// ---------------------------------------------------------------------------
 model Candle {
   symbolId  Int            @map("symbol_id")
   interval  CandleInterval
-  openTime  DateTime       @map("open_time") @db.Timestamptz(3)
-  open      Decimal        @db.Decimal(20, 8)
+  openTime  DateTime       @map("open_time") @db.Timestamptz(3) // начало свечи (UTC)
+  open      Decimal        @db.Decimal(20, 8) // Decimal — точность для крипто-цен
   high      Decimal        @db.Decimal(20, 8)
   low       Decimal        @db.Decimal(20, 8)
   close     Decimal        @db.Decimal(20, 8)
@@ -61,8 +97,11 @@ model Candle {
   updatedAt DateTime       @updatedAt @map("updated_at")
 
   symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  // onDelete: Cascade — удали Symbol → все его Candle удалятся автоматически
 
+  // Составной PK: одна свеча = один symbol + один interval + один openTime
   @@id([symbolId, interval, openTime])
+  // Индекс для «последние N свечей символа» (ORDER BY open_time DESC)
   @@index([symbolId, interval, openTime(sort: Desc)])
   @@index([openTime])
   @@map("candles")

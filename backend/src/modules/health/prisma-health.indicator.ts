@@ -1,3 +1,12 @@
+/**
+ * Кастомный health-индикатор для PostgreSQL через Prisma.
+ *
+ * Terminus предоставляет базовый класс HealthIndicator и метод getStatus().
+ * Мы расширяем его, чтобы проверить именно нашу БД (не generic HTTP ping).
+ *
+ * Promise.race — если Postgres завис, ping не будет ждать вечно:
+ *   либо SELECT 1 успеет за 1.5 сек, либо reject с 'database ping timeout'.
+ */
 import { Injectable } from '@nestjs/common';
 import {
   HealthCheckError,
@@ -30,6 +39,7 @@ export class PrismaHealthIndicator extends HealthIndicator {
       ]);
       return this.getStatus(key, true);
     } catch (error) {
+      // HealthCheckError — Terminus превращает это в HTTP 503 с деталями
       throw new HealthCheckError(
         'Database check failed',
         this.getStatus(key, false, {

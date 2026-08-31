@@ -1,3 +1,14 @@
+/**
+ * Начальные данные для локальной разработки и тестов.
+ *
+ * Запуск: npm run prisma:seed (читает DATABASE_URL из ../.env)
+ *
+ * upsert — «создай, если нет; обнови, если есть»:
+ *   повторный seed безопасен, дублей не будет (where по уникальному coingeckoId).
+ *
+ * На B1 seed заполняет только symbols.
+ * Свечи (candles) появятся на B3 (CoinGecko sync), пользователи — на B4 (auth).
+ */
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

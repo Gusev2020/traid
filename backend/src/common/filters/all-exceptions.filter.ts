@@ -1,3 +1,19 @@
+/**
+ * Единый формат JSON-ответа при любой ошибке.
+ *
+ * @Catch() без аргументов — ловит ВСЕ исключения (HttpException, Prisma, unknown).
+ *
+ * Поток обработки ошибки:
+ *   1. Контроллер/сервис бросает exception
+ *   2. Nest передаёт его сюда (глобальный filter из app.setup.ts)
+ *   3. normalize() → statusCode, code, message
+ *   4. Логируем (error для 5xx, warn для 4xx) с requestId
+ *   5. Отправляем клиенту JSON { statusCode, code, message, path, requestId, timestamp }
+ *
+ * Маппинг Prisma-кодов — пригодится на B2/B4:
+ *   P2002 → 409 Conflict (уникальный индекс нарушен)
+ *   P2025 → 404 Not Found (запись не найдена при update/delete)
+ */
 import {
   ArgumentsHost,
   Catch,
@@ -51,11 +67,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     return value;
   }
 
+  /** Превращает любое исключение в { statusCode, code, message } */
   private normalize(exception: unknown): {
     statusCode: number;
     code: string;
     message: string;
   } {
+    // Стандартные HTTP-ошибки Nest: BadRequestException, NotFoundException и т.д.
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
       const res = exception.getResponse();
@@ -71,6 +89,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
+    // Ошибки Prisma ORM (коды: https://www.prisma.io/docs/reference/api-reference/error-reference)
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === 'P2002') {
         return {
@@ -88,6 +107,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
+    // Всё остальное — 500, детали не показываем клиенту (безопасность)
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_ERROR',
