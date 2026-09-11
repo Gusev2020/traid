@@ -14,22 +14,27 @@ import {
 } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { setupOpenApi } from './openapi';
 
 export function configureApp(app: INestApplication): void {
   // Подключаем pino как логгер Nest (вместо встроенного Logger).
   app.useLogger(app.get(Logger));
 
   // Все REST-эндпоинты будут под /api/v1/...
-  // Исключение: GET /health — короткий путь для load balancer / Kubernetes.
+  // Исключения: GET /health (probe) и /docs* (Swagger / OpenAPI JSON).
   app.setGlobalPrefix('api/v1', {
-    exclude: [{ path: 'health', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'docs', method: RequestMethod.GET },
+      { path: 'docs-json', method: RequestMethod.GET },
+      { path: 'docs-yaml', method: RequestMethod.GET },
+    ],
   });
 
-  // ValidationPipe — задел на B2 (REST с DTO + class-validator).
-  // Сейчас контроллеров с body/query нет, но pipe уже готов:
+  // ValidationPipe — REST с DTO + class-validator (B2: path/query Symbol и Candle).
   //   whitelist            — лишние поля в запросе отбрасываются
   //   forbidNonWhitelisted — лишние поля → HTTP 400
-  //   transform            — строки "123" автоматически станут number в DTO
+  //   transform            — "btc" → BTC в SymbolTickerParamDto, "123" → number
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -46,4 +51,7 @@ export function configureApp(app: INestApplication): void {
   // При SIGTERM/SIGINT Nest вызовет onModuleDestroy → PrismaService.$disconnect().
   // Нужно для корректного завершения в Docker/Kubernetes.
   app.enableShutdownHooks();
+
+  // Swagger UI /docs и сырой OpenAPI JSON /docs-json (вне префикса /api/v1).
+  setupOpenApi(app);
 }

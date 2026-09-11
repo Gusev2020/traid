@@ -25,6 +25,7 @@ import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import type { ErrorResponseDto } from '../dto/error-response.dto';
+import { DomainError } from '../errors/domain.error';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -73,6 +74,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
     code: string;
     message: string;
   } {
+    // Доменные ошибки сервисов: code задан явно (SYMBOL_NOT_FOUND), не из имени класса.
+    if (exception instanceof DomainError) {
+      return {
+        statusCode: this.statusForDomain(exception.code),
+        code: exception.code,
+        message: exception.message,
+      };
+    }
+
     // Стандартные HTTP-ошибки Nest: BadRequestException, NotFoundException и т.д.
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
@@ -113,5 +123,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code: 'INTERNAL_ERROR',
       message: 'Internal server error',
     };
+  }
+
+  /** HTTP-статус живёт здесь, не в сервисе. Неизвестный code → 500, чтобы не проглотить опечатку. */
+  private statusForDomain(code: string): number {
+    if (code === 'SYMBOL_NOT_FOUND') {
+      return HttpStatus.NOT_FOUND;
+    }
+    return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 }
