@@ -20,9 +20,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// url здесь обязателен: проект на Prisma 6.19. Расширение Cursor/VS Code
+// уже валидирует схему правилами Prisma 7 и подчёркивает url — для CLI 6.x
+// это ложное срабатывание. Строка подключения для migrate дублируется
+// в prisma.config.ts; клиент Nest читает DATABASE_URL из env при generate.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // строка из traid/.env
+  url      = env("DATABASE_URL")
 }
 
 // Роли пользователей — используется на B4 (AuthModule + RolesGuard)
