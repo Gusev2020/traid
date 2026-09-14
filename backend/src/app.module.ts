@@ -13,6 +13,7 @@
 import { Module } from '@nestjs/common';
 import { AppConfigModule } from './config/config.module';
 import { loggerModule } from './config/logger.module';
+import { CandlesModule } from './modules/candles/candles.module';
 import { HealthModule } from './modules/health/health.module';
 import { SymbolsModule } from './modules/symbols/symbols.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +25,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule, // 3. Подключение к Postgres (@Global — доступен везде)
     HealthModule, // 4. GET /health — проверка, что приложение и БД живы
     SymbolsModule, // 5. B2: GET /symbols, GET /symbols/:ticker
+    CandlesModule, // 6. B2 тикет 03: GET /candles (пустой конверт { symbol, interval, items, stale })
   ],
 })
 export class AppModule {}

@@ -4,7 +4,8 @@
  * AllExceptionsFilter читает поле code как есть: SYMBOL_NOT_FOUND,
  * а не NOTFOUND из имени Nest NotFoundException.
  *
- * CANDLE_NOT_FOUND появится в тикетах свечей — тот же базовый класс.
+ * Тикет 03 (GET /candles) бросает SymbolNotFoundError так же, как карточка Symbol.
+ * CANDLE_NOT_FOUND — тикет 05 (latest), тот же базовый класс.
  */
 export class DomainError extends Error {
   constructor(
