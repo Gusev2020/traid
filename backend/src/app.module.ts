@@ -23,7 +23,7 @@ import { PrismaModule } from './prisma/prisma.module';
     loggerModule, // 2. HTTP-логирование (pino)
     PrismaModule, // 3. Подключение к Postgres (@Global — доступен везде)
     HealthModule, // 4. GET /health — проверка, что приложение и БД живы
-    SymbolsModule, // 5. B2: GET /symbols/:ticker
+    SymbolsModule, // 5. B2: GET /symbols, GET /symbols/:ticker
   ],
 })
 export class AppModule {}

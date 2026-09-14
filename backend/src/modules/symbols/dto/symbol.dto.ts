@@ -1,6 +1,9 @@
 /**
  * JSON-карточка Symbol для клиента и для Swagger / OpenAPI.
  *
+ * Одна карточка — GET /symbols/:ticker (тикет 01).
+ * Элемент items — GET /symbols (тикет 02, SymbolListDto).
+ *
  * Денежных Decimal здесь нет; lastSyncedAt — строка или null
  * (seed ещё не синкался с CoinGecko, поэтому у BTC будет null).
  *

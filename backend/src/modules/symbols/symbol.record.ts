@@ -1,6 +1,7 @@
 /**
- * Внутренняя запись Symbol между repository и controller.
+ * Внутренняя запись Symbol: repository → service → controller.
  *
+ * Тикет 02 отдаёт массив Record в SymbolListDto.items через toDto().
  * Не путать с SymbolDto: там lastSyncedAt — ISO-строка для JSON,
  * здесь Date | null, как в Postgres (Timestamptz).
  * Prisma-модель сюда не протекается (нет id, createdAt).

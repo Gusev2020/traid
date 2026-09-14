@@ -1,12 +1,16 @@
 /**
- * E2E слоя B2 — GET /api/v1/symbols/:ticker на локальный Postgres.
+ * E2E слоя B2 — HTTP-шов тикетов 01 (карточка) и 02 (список) на локальный Postgres.
+ *
+ * Поднимает AppModule + configureApp (тот же pipe/Swagger, что prod).
+ * Цепочка та же, что в коде: Query DTO → Controller → Service → Repository → Prisma.
  *
  * Отличие от bootstrap-теста B1:
  *   - PrismaService НЕ мокаем: бьём в реальную БД dev-окружения
  *   - seed-символы (BTC, ETH, …) не truncate; фикстуру ZZZ удаляем только её
  *
- * Покрывает внешнее поведение шва HTTP: 200 карточки, регистр ticker,
- * 404 SYMBOL_NOT_FOUND, inactive → 200, OpenAPI 3 на /docs-json.
+ * Тикет 01: 200 карточки, регистр ticker, 404 SYMBOL_NOT_FOUND, inactive → 200.
+ * Тикет 02: Active по умолчанию, search, active=false, limit/offset + total,
+ *           400 whitelist / невалидный limit, query-поля в OpenAPI.
  *
  * Запуск: npm run test:e2e
  */
@@ -18,7 +22,17 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-describe('GET /api/v1/symbols/:ticker (e2e)', () => {
+type SymbolListBody = {
+  items: Array<{ ticker: string; isActive: boolean }>;
+  total: number;
+};
+
+/** Supertest body — any; сужаем до контракта { items, total }, не лезем в Prisma. */
+function asList(res: { body: unknown }): SymbolListBody {
+  return res.body as SymbolListBody;
+}
+
+describe('GET /api/v1/symbols (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
 
@@ -147,5 +161,131 @@ describe('GET /api/v1/symbols/:ticker (e2e)', () => {
       'BTC',
     );
     expect(spec.components.schemas.ErrorResponseDto).toBeDefined();
+  });
+
+  // --- тикет 02: GET /symbols, тот же app и фикстура ZZZ, seed не truncate ---
+
+  it('returns only Active Symbol with default limit and total', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .expect(200);
+
+    const body = asList(res);
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(typeof body.total).toBe('number');
+    expect(body.items.length).toBeLessThanOrEqual(50);
+    expect(body.items.length).toBeLessThanOrEqual(body.total);
+    expect(body.items.every((item) => item.isActive)).toBe(true);
+    expect(body.items.some((item) => item.ticker === 'BTC')).toBe(true);
+    expect(body.items.some((item) => item.ticker === 'ZZZ')).toBe(false);
+  });
+
+  it('searches ticker or name without regard to case', async () => {
+    const [byTicker, byName] = await Promise.all([
+      request(app.getHttpServer())
+        .get('/api/v1/symbols')
+        .query({ search: 'eth' })
+        .expect(200),
+      request(app.getHttpServer())
+        .get('/api/v1/symbols')
+        .query({ search: 'ETHEREUM' })
+        .expect(200),
+    ]);
+
+    const tickerHits = asList(byTicker);
+    const nameHits = asList(byName);
+    expect(tickerHits.items.some((item) => item.ticker === 'ETH')).toBe(true);
+    expect(tickerHits.items.some((item) => item.ticker === 'BTC')).toBe(false);
+    expect(nameHits.items).toEqual(tickerHits.items);
+  });
+
+  it('returns only inactive Symbol when active=false', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ active: 'false' })
+      .expect(200);
+
+    const body = asList(res);
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.items.every((item) => item.isActive === false)).toBe(true);
+    expect(body.items.some((item) => item.ticker === 'ZZZ')).toBe(true);
+    expect(body.items.some((item) => item.ticker === 'BTC')).toBe(false);
+  });
+
+  it('pages with limit/offset and keeps total as the filtered count', async () => {
+    const first = await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ limit: 2, offset: 0 })
+      .expect(200);
+    const second = await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ limit: 2, offset: 2 })
+      .expect(200);
+
+    const firstPage = asList(first);
+    const secondPage = asList(second);
+    expect(firstPage.items).toHaveLength(2);
+    expect(firstPage.total).toBeGreaterThan(2);
+    expect(firstPage.total).toBe(secondPage.total);
+    expect(firstPage.items.length).not.toBe(firstPage.total);
+    expect(firstPage.items.map((item) => item.ticker)).not.toEqual(
+      secondPage.items.map((item) => item.ticker),
+    );
+  });
+
+  it('rejects an extra query field with 400', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ foo: 'bar' })
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      statusCode: 400,
+      code: 'BADREQUEST',
+      path: '/api/v1/symbols?foo=bar',
+    });
+  });
+
+  it('rejects invalid limit and offset with 400', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ limit: 0 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ limit: 101 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ offset: -1 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/v1/symbols')
+      .query({ limit: 'abc' })
+      .expect(400);
+  });
+
+  it('exposes the list route in OpenAPI 3', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+    const spec = res.body as {
+      paths: Record<
+        string,
+        { get?: { tags?: string[]; parameters?: Array<{ name: string }> } }
+      >;
+      components: { schemas: { SymbolListDto?: unknown } };
+    };
+    const listGet = spec.paths['/api/v1/symbols']?.get;
+
+    expect(listGet).toBeDefined();
+    expect(listGet?.tags).toContain('symbols');
+    expect(spec.components.schemas.SymbolListDto).toBeDefined();
+    expect(listGet?.parameters?.map((param) => param.name).sort()).toEqual([
+      'active',
+      'limit',
+      'offset',
+      'search',
+    ]);
   });
 });
