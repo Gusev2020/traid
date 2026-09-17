@@ -127,7 +127,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   /** HTTP-статус живёт здесь, не в сервисе. Неизвестный code → 500, чтобы не проглотить опечатку. */
   private statusForDomain(code: string): number {
-    if (code === 'SYMBOL_NOT_FOUND') {
+    // Тикеты 01/03: SYMBOL_NOT_FOUND. Тикет 05: CANDLE_NOT_FOUND — тот же 404, другой code.
+    if (code === 'SYMBOL_NOT_FOUND' || code === 'CANDLE_NOT_FOUND') {
       return HttpStatus.NOT_FOUND;
     }
     // Тикет 04: сервис бросает InvalidCandleRangeError без statusCode.

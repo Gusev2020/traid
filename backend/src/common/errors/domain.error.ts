@@ -30,3 +30,10 @@ export class InvalidCandleRangeError extends DomainError {
     super('INVALID_CANDLE_RANGE', 'from must not be after to');
   }
 }
+
+/** Тикет 05: Symbol есть, Latest Candle нет. HTTP 404 ставит filter, не сервис. */
+export class CandleNotFoundError extends DomainError {
+  constructor() {
+    super('CANDLE_NOT_FOUND', 'Latest Candle not found');
+  }
+}

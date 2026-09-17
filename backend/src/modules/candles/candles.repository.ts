@@ -6,9 +6,10 @@
  * Ticker резолвится здесь (vsCurrency usd), без импорта SymbolsModule:
  * feature-модули независимы, PrismaModule @Global().
  *
- * Два входа с сервиса (тикеты 03–04):
+ * Три входа с сервиса (тикеты 03–05):
  *   findSymbolIdByTicker — есть ли Symbol, в т.ч. неактивный, без фильтра isActive
  *   findHistory          — свечи пары symbolId+interval с окном; пусто → []
+ *   findLatest           — Latest Candle той же пары (max openTime); пусто → null
  *
  * Ищем Symbol по паре ticker + vsCurrency: @@unique([ticker, vsCurrency]).
  * vsCurrency в MVP всегда usd (параметр в URL не принимаем).
@@ -71,6 +72,23 @@ export class CandlesRepository {
     });
     const chronological = window.newestFirst ? [...rows].reverse() : rows;
     return chronological.map((row) => this.toRecord(row));
+  }
+
+  /**
+   * Тикет 05: Latest Candle пары symbolId+interval.
+   * ORDER BY openTime DESC + findFirst — бар с наибольшим openTime.
+   * Нет строк → null (сервис отличит от отсутствия Symbol).
+   * Индекс @@index([symbolId, interval, openTime(sort: Desc)]) как раз для этого.
+   */
+  async findLatest(
+    symbolId: number,
+    interval: CandleInterval,
+  ): Promise<CandleRecord | null> {
+    const row = await this.prisma.candle.findFirst({
+      where: { symbolId, interval },
+      orderBy: { openTime: 'desc' },
+    });
+    return row === null ? null : this.toRecord(row);
   }
 
   /** Prisma-строка → domain. Decimal → string, чтобы JSON не округлил цены. */

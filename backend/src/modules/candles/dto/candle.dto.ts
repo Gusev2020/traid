@@ -3,6 +3,7 @@
  * Карта файлов — ../candles.module.ts.
  *
  * Элемент items — GET /candles (тикеты 03–04, CandleHistoryDto).
+ * Тело GET /candles/latest (тикет 05) — тот же бар, не конверт.
  * Денежные Decimal наружу — string; Volume всегда в объекте: string или null
  * (пусто источника ≠ ноль). type задаём явно: openapi:export через tsx
  * без emitDecoratorMetadata.

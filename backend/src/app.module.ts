@@ -25,7 +25,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule, // 3. Подключение к Postgres (@Global — доступен везде)
     HealthModule, // 4. GET /health — проверка, что приложение и БД живы
     SymbolsModule, // 5. B2: GET /symbols, GET /symbols/:ticker
-    CandlesModule, // 6. B2 тикет 03: GET /candles (пустой конверт { symbol, interval, items, stale })
+    CandlesModule, // 6. B2: GET /candles (03–04) и GET /candles/latest (05)
   ],
 })
 export class AppModule {}

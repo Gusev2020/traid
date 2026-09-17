@@ -17,7 +17,7 @@
  *   JSON страница →  dto/symbol-list.dto.ts          { items: SymbolDto[], total }
  *
  * Эндпоинты: GET /api/v1/symbols и GET /api/v1/symbols/:ticker.
- * История свечей — CandlesModule (тикет 03), без импорта отсюда.
+ * История и Latest Candle — CandlesModule (тикеты 03–05), без импорта отсюда.
  */
 import { Module } from '@nestjs/common';
 import { SymbolsController } from './symbols.controller';

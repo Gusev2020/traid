@@ -13,11 +13,17 @@
  *   from позже to → InvalidCandleRangeError (filter → 400)
  *   limit по умолчанию 500
  *
+ * Тикет 05 — getLatest:
+ *   нет Symbol → SymbolNotFoundError (SYMBOL_NOT_FOUND)
+ *   Symbol есть, Latest Candle нет → CandleNotFoundError (CANDLE_NOT_FOUND)
+ *   isActive не фильтруем: неактивный Symbol обслуживается как активный
+ *
  * Принимает поля, не GetCandlesQueryDto: HTTP остаётся в контроллере.
  */
 import { Injectable } from '@nestjs/common';
 import { CandleInterval } from '@prisma/client';
 import {
+  CandleNotFoundError,
   InvalidCandleRangeError,
   SymbolNotFoundError,
 } from '../../common/errors/domain.error';
@@ -81,6 +87,27 @@ export class CandlesService {
       items: this.applyWindow(items, window),
       stale: false,
     };
+  }
+
+  /**
+   * Тикет 05: Latest Candle пары ticker + CandleInterval.
+   * HTTP-коды ставит filter. В отличие от getHistory, пустой ряд — ошибка:
+   * клиенту latest нужен один бар, а не конверт с items: [].
+   */
+  async getLatest(query: {
+    symbol: string;
+    interval: CandleInterval;
+  }): Promise<CandleRecord> {
+    const symbolId = await this.candles.findSymbolIdByTicker(query.symbol);
+    if (symbolId === null) {
+      throw new SymbolNotFoundError(query.symbol);
+    }
+    const candle = await this.candles.findLatest(symbolId, query.interval);
+    // Symbol жив, бара нет — не SYMBOL_NOT_FOUND: график отличит «ещё нет свечи».
+    if (candle === null) {
+      throw new CandleNotFoundError();
+    }
+    return candle;
   }
 
   /**

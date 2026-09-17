@@ -1,6 +1,6 @@
 /**
  * HTTP-слой Candle. Без Prisma и без бизнес-логики.
- * Соседи: GetCandlesQueryDto (вход), CandlesService (данные),
+ * Соседи: GetCandlesQueryDto / GetLatestCandleQueryDto (вход), CandlesService (данные),
  * CandleHistoryDto / CandleDto (выход). Карта файлов — candles.module.ts.
  *
  * Цепочка при GET /api/v1/candles (тикеты 03–04):
@@ -13,6 +13,16 @@
  *      from позже to → InvalidCandleRangeError → 400
  *   4. toDto() на каждый CandleRecord → items; stale уже false
  *   5. 200 + CandleHistoryDto { symbol, interval, items, stale } — канон §7.1
+ *
+ * Цепочка при GET /api/v1/candles/latest (тикет 05):
+ *   1. ValidationPipe валидирует query через GetLatestCandleQueryDto
+ *      (только symbol+interval; лишние поля → 400)
+ *   2. CandlesService.getLatest: нет Symbol → SYMBOL_NOT_FOUND;
+ *      нет бара → CANDLE_NOT_FOUND
+ *   3. 200 + один CandleDto (цены string, Volume string|null)
+ *
+ * @Get('latest') объявлен выше @Get(), чтобы статический path не смешался
+ * с query-роутом истории — та же идея, что list перед :ticker у symbols.
  *
  * JWT нет до B4: роут открыт так же, как /health. @Public() появится вместе с guard.
  * @ApiQuery явно: openapi:export идёт через tsx без swagger-плагина.
@@ -32,11 +42,43 @@ import { CandlesService } from './candles.service';
 import { CandleDto } from './dto/candle.dto';
 import { CandleHistoryDto } from './dto/candle-history.dto';
 import { GetCandlesQueryDto } from './dto/get-candles-query.dto';
+import { GetLatestCandleQueryDto } from './dto/get-latest-candle-query.dto';
 
 @ApiTags('candles')
 @Controller('candles')
 export class CandlesController {
   constructor(private readonly candles: CandlesService) {}
+
+  /**
+   * Тикет 05: один Latest Candle, не конверт истории.
+   * Query уже валиден; наружу Record → CandleDto. 404 code задаёт сервис.
+   */
+  @Get('latest')
+  @ApiOperation({ summary: 'Get Latest Candle' })
+  @ApiQuery({
+    name: 'symbol',
+    required: true,
+    type: String,
+    example: 'BTC',
+    description: 'Ticker of the Symbol',
+  })
+  @ApiQuery({
+    name: 'interval',
+    required: true,
+    enum: CandleInterval,
+    example: CandleInterval.H4,
+    description: 'CandleInterval: M30, H4 or D4',
+  })
+  @ApiOkResponse({ type: CandleDto })
+  @ApiResponse({ status: 400, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  async getLatest(@Query() query: GetLatestCandleQueryDto): Promise<CandleDto> {
+    const candle = await this.candles.getLatest({
+      symbol: query.symbol,
+      interval: query.interval,
+    });
+    return this.toDto(candle);
+  }
 
   /** Тикеты 03–04: конверт истории. Query уже валиден; наружу Record → CandleDto. */
   @Get()

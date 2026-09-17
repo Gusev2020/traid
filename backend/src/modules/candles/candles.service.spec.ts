@@ -1,6 +1,7 @@
 /**
  * Unit-шов тикетов 03–04 (spec Testing Decisions, шов 2): правила окна
- * и пустая история → [] (не not-found). HTTP-шов — test/candles.e2e-spec.ts.
+ * и пустая история → [] (не not-found). Тикет 05 (latest) сюда не входит:
+ * lookup без окна, шов — HTTP, test/candles.e2e-spec.ts.
  *
  * Репозиторий замокан, как health-тесты B1 мокают индикаторы.
  * HTTP-коды здесь не проверяем — сервис их не знает.
