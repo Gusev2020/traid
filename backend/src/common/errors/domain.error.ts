@@ -5,6 +5,7 @@
  * а не NOTFOUND из имени Nest NotFoundException.
  *
  * Тикет 03 (GET /candles) бросает SymbolNotFoundError так же, как карточка Symbol.
+ * Тикет 04 — InvalidCandleRangeError (from позже to).
  * CANDLE_NOT_FOUND — тикет 05 (latest), тот же базовый класс.
  */
 export class DomainError extends Error {
@@ -20,5 +21,12 @@ export class DomainError extends Error {
 export class SymbolNotFoundError extends DomainError {
   constructor(ticker: string) {
     super('SYMBOL_NOT_FOUND', `Symbol ${ticker} not found`);
+  }
+}
+
+/** Тикет 04: from позже to. HTTP 400 ставит filter, не сервис. */
+export class InvalidCandleRangeError extends DomainError {
+  constructor() {
+    super('INVALID_CANDLE_RANGE', 'from must not be after to');
   }
 }

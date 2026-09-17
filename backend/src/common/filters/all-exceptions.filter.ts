@@ -130,6 +130,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (code === 'SYMBOL_NOT_FOUND') {
       return HttpStatus.NOT_FOUND;
     }
+    // Тикет 04: сервис бросает InvalidCandleRangeError без statusCode.
+    if (code === 'INVALID_CANDLE_RANGE') {
+      return HttpStatus.BAD_REQUEST;
+    }
     return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 }

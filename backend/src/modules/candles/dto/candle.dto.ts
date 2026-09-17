@@ -2,10 +2,7 @@
  * JSON-бар Candle для клиента и для Swagger / OpenAPI.
  * Карта файлов — ../candles.module.ts.
  *
- * Элемент items — GET /candles (тикет 03, CandleHistoryDto). В тикете 03
- * items всегда [] (seed без свечей); форма бара нужна, чтобы конверт
- * совпал с §7.1. Один бар — GET /candles/latest (тикет 05).
- *
+ * Элемент items — GET /candles (тикеты 03–04, CandleHistoryDto).
  * Денежные Decimal наружу — string; Volume всегда в объекте: string или null
  * (пусто источника ≠ ноль). type задаём явно: openapi:export через tsx
  * без emitDecoratorMetadata.

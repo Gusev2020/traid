@@ -6,9 +6,9 @@
  * Ticker резолвится здесь (vsCurrency usd), без импорта SymbolsModule:
  * feature-модули независимы, PrismaModule @Global().
  *
- * Два входа с сервиса (тикет 03):
+ * Два входа с сервиса (тикеты 03–04):
  *   findSymbolIdByTicker — есть ли Symbol, в т.ч. неактивный, без фильтра isActive
- *   findHistory          — свечи пары symbolId+interval; пусто → []; окно — тикет 04
+ *   findHistory          — свечи пары symbolId+interval с окном; пусто → []
  *
  * Ищем Symbol по паре ticker + vsCurrency: @@unique([ticker, vsCurrency]).
  * vsCurrency в MVP всегда usd (параметр в URL не принимаем).
@@ -19,6 +19,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CandleRecord } from './candle.record';
 
 const VS_CURRENCY = 'usd';
+
+/** Окно после defaults сервиса. Не путать с GetCandlesQueryDto (там from/to — ISO-строки). */
+export type CandleHistoryWindow = {
+  from?: Date;
+  to?: Date;
+  limit: number;
+  /** true = нет дат: взять хвост (DESC+take), наружу всё равно ASC. */
+  newestFirst: boolean;
+};
 
 @Injectable()
 export class CandlesRepository {
@@ -33,16 +42,35 @@ export class CandlesRepository {
     return row?.id ?? null;
   }
 
-  /** Тикет 03: все свечи пары, ASC по openTime. Пусто → []. from/to/limit — тикет 04. */
+  /**
+   * Тикет 04: Prisma-запрос, не правила окна (их задал сервис в window).
+   * gte/lte — inclusive openTime, как spec. Пусто → [].
+   * newestFirst: ORDER BY DESC + take, затем reverse → JSON всегда ASC.
+   * Индекс схемы @@index([symbolId, interval, openTime(sort: Desc)]) как раз для хвоста.
+   */
   async findHistory(
     symbolId: number,
     interval: CandleInterval,
+    window: CandleHistoryWindow,
   ): Promise<CandleRecord[]> {
+    const openTime =
+      window.from !== undefined || window.to !== undefined
+        ? {
+            ...(window.from !== undefined ? { gte: window.from } : {}),
+            ...(window.to !== undefined ? { lte: window.to } : {}),
+          }
+        : undefined;
     const rows = await this.prisma.candle.findMany({
-      where: { symbolId, interval },
-      orderBy: { openTime: 'asc' },
+      where: {
+        symbolId,
+        interval,
+        ...(openTime !== undefined ? { openTime } : {}),
+      },
+      orderBy: { openTime: window.newestFirst ? 'desc' : 'asc' },
+      take: window.limit,
     });
-    return rows.map((row) => this.toRecord(row));
+    const chronological = window.newestFirst ? [...rows].reverse() : rows;
+    return chronological.map((row) => this.toRecord(row));
   }
 
   /** Prisma-строка → domain. Decimal → string, чтобы JSON не округлил цены. */
