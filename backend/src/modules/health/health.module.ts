@@ -6,7 +6,8 @@
  *   - Kubernetes liveness/readiness probe
  *   - Load balancer (убирает мёртвый инстанс из ротации)
  *
- * Эндпоинт: GET /health (БЕЗ префикса /api/v1 — см. app.setup.ts)
+ * Эндпоинт: GET /health (БЕЗ префикса /api/v1 — см. app.setup.ts).
+ * Throttler пропускается (@SkipThrottle) — probe жив при флуде публичного API.
  */
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';

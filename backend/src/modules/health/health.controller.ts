@@ -3,10 +3,11 @@
  *
  * Цепочка при GET /health:
  *   1. Nest маршрутизирует запрос сюда (путь /health, не /api/v1/health)
- *   2. @HealthCheck() декоратор форматирует ответ Terminus
- *   3. HealthCheckService.check() запускает массив индикаторов параллельно
- *   4. Каждый индикатор возвращает { key: { status: 'up' | 'down' } }
- *   5. Если хотя бы один 'down' → HTTP 503, иначе HTTP 200 { status: 'ok' }
+ *   2. @SkipThrottle на именованных short/medium/long — probe не режется флудом API
+ *   3. @HealthCheck() декоратор форматирует ответ Terminus
+ *   4. HealthCheckService.check() запускает массив индикаторов параллельно
+ *   5. Каждый индикатор возвращает { key: { status: 'up' | 'down' } }
+ *   6. Если хотя бы один 'down' → HTTP 503, иначе HTTP 200 { status: 'ok' }
  */
 import { Controller, Get } from '@nestjs/common';
 import {
@@ -14,8 +15,11 @@ import {
   HealthCheckService,
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaHealthIndicator } from './prisma-health.indicator';
 
+// Имена short/medium/long обязательны: голый @SkipThrottle() в v6 скипает только default.
+@SkipThrottle({ short: true, medium: true, long: true })
 @Controller('health')
 export class HealthController {
   constructor(

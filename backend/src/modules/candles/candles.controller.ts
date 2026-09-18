@@ -25,6 +25,8 @@
  * с query-роутом истории — та же идея, что list перед :ticker у symbols.
  *
  * JWT нет до B4: роут открыт так же, как /health. @Public() появится вместе с guard.
+ * B3 тикет 01: глобальный ThrottlerGuard режет флуд; 429 только на истории в OpenAPI
+ * (latest тоже под guard, но контракт 429 в spec — GET history). Login throttle — B4.
  * @ApiQuery явно: openapi:export идёт через tsx без swagger-плагина.
  */
 import { Controller, Get, Query } from '@nestjs/common';
@@ -127,6 +129,8 @@ export class CandlesController {
   @ApiOkResponse({ type: CandleHistoryDto })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 404, type: ErrorResponseDto })
+  // B3 тикет 01: скрейпинг истории → 429 + Retry-After. Тело — ErrorResponseDto фильтра.
+  @ApiResponse({ status: 429, type: ErrorResponseDto })
   async getHistory(
     @Query() query: GetCandlesQueryDto,
   ): Promise<CandleHistoryDto> {

@@ -12,11 +12,16 @@ import {
   RequestMethod,
   ValidationPipe,
 } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { setupOpenApi } from './openapi';
 
 export function configureApp(app: INestApplication): void {
+  // B3 тикет 01: ThrottlerGuard ключует по req.ip. За nginx/caddy без trust proxy
+  // все клиенты выглядят как один IP прокси — один скрейпер глушит всех.
+  (app as NestExpressApplication).set('trust proxy', 1);
+
   // Подключаем pino как логгер Nest (вместо встроенного Logger).
   app.useLogger(app.get(Logger));
 

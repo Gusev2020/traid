@@ -371,6 +371,8 @@ describe('GET /api/v1/candles (e2e)', () => {
     expect(candlesGet?.responses['200']).toBeDefined();
     expect(candlesGet?.responses['400']).toBeDefined();
     expect(candlesGet?.responses['404']).toBeDefined();
+    // B3 тикет 01: 429 на истории в контракте, даже когда этот файл skipIf'ом не флудит.
+    expect(candlesGet?.responses['429']).toBeDefined();
     expect(candlesGet?.parameters?.map((param) => param.name).sort()).toEqual([
       'from',
       'interval',
