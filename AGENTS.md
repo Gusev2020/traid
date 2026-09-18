@@ -5,10 +5,11 @@
 | Что | Где | Когда подгружается |
 |---|---|---|
 | Запреты и конвенции | `.cursor/rules/*.mdc` | `project.mdc` — всегда; остальные — по `globs` открытых файлов |
-| Пошаговые процедуры | `.cursor/skills/*/SKILL.md` | Агент сам, по `description` (закрыть слой, новый модуль, OpenAPI…) |
+| Пошаговые процедуры | `.cursor/skills/*/SKILL.md` (Treyd), `.agents/skills/*/SKILL.md` (Pocock) | Агент сам, по `description` (закрыть слой, цепочка фичи, OpenAPI…) |
 | Этот файл | корень репо | Обзор стека, текущий слой, MCP, куда не лезть |
 | Источник истины по системе | `ARCHITECTURE.md` | Архитектура, схема, контракты |
 | Источник истины по порядку работ | `ROADMAP.md` | Слои B1–B4 → F1–F4 → I1–I4, DoD |
+| Цепочка фичи (Pocock) | `docs/agents/build-chain.md` | grill-with-docs → to-spec → to-tickets → implement → code-review. Slash: `/build-chain` |
 
 Не дублировать ARCHITECTURE в rules. Rule = «нельзя / только так». Skill = «сделай за N шагов». MCP = живые данные (макет, docs, БД, браузер, GitHub).
 
@@ -55,3 +56,14 @@ go install github.com/github/github-mcp-server/cmd/github-mcp-server@latest
 - Ходить в реальный CoinGecko из тестов (`nock` / MSW).
 - INSERT/UPDATE/DELETE через postgres MCP (только чтение).
 - Переходить к следующему слою ROADMAP при красных тестах текущего.
+
+## Agent skills
+
+### Issue tracker
+
+Issues и specs живут как markdown в `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: корневой `CONTEXT.md` и `docs/adr/`. See `docs/agents/domain.md`.
+
