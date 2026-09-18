@@ -7,10 +7,12 @@
  *   3. Сделать ConfigService доступным глобально (isGlobal: true)
  *
  * Если DATABASE_URL пустой — приложение не стартует, а падает с понятной ошибкой.
+ * B3: рядом лежит кусок "coingecko" (URL Source, ключ, лимит). JWT — тикет B4.
  */
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { resolve } from 'node:path';
+import coingeckoConfig from './coingecko.config';
 import configuration from './configuration';
 import { validateEnv } from './env.validation';
 
@@ -24,7 +26,7 @@ import { validateEnv } from './env.validation';
         resolve(process.cwd(), '.env'), // запуск из backend/
         resolve(process.cwd(), '../.env'), // запуск из корня traid/ (основной .env)
       ],
-      load: [configuration], // типизированный namespace "app" (см. configuration.ts)
+      load: [configuration, coingeckoConfig], // "app" (порт, БД) и "coingecko" (Source)
       validate: validateEnv, // Zod-проверка — см. env.validation.ts
     }),
   ],

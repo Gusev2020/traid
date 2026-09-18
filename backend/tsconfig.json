@@ -23,5 +23,7 @@
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
     "types": ["node", "jest"]
-  }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
