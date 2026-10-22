@@ -13,6 +13,10 @@
  *
  * Что сделал тикет 05: публичный GET /api/v1/candles/latest. 200 — один CandleDto.
  * Нет Symbol → 404 SYMBOL_NOT_FOUND. Нет бара → 404 CANDLE_NOT_FOUND.
+ * Поля stale у latest нет: это один бар, не конверт истории.
+ *
+ * B3 тикет 03: CandlesService спрашивает адаптер, открыт ли breaker.
+ * Поэтому модуль импортирует CoinGeckoModule. Адаптер в GET не скачивает свечи.
  *
  * Шаблон: Controller → Service → Repository. Prisma не импортируется явно:
  * PrismaModule помечен @Global(), CandlesRepository получает PrismaService из DI.
@@ -22,7 +26,7 @@
  *   query string  →  dto/get-candles-query.dto.ts         symbol+interval; from/to ISO; limit
  *   query latest  →  dto/get-latest-candle-query.dto.ts   только symbol+interval
  *   HTTP          →  candles.controller.ts                ISO → Date; Swagger; toDto()
- *   оркестрация   →  candles.service.ts                   окно; getLatest; stale=false
+ *   оркестрация   →  candles.service.ts                   окно; getLatest; stale = breaker
  *   Prisma        →  candles.repository.ts                ticker+usd; окно; findLatest DESC
  *   domain        →  candle.record.ts                     Date, цены string
  *   JSON бар      →  dto/candle.dto.ts                    элемент items и ответ latest
@@ -34,11 +38,14 @@
  *   e2e           →  test/candles.e2e-spec.ts             фикстуры Candle; afterEach только их
  */
 import { Module } from '@nestjs/common';
+import { CoinGeckoModule } from '../../integrations/coingecko/coingecko.module';
 import { CandlesController } from './candles.controller';
 import { CandlesRepository } from './candles.repository';
 import { CandlesService } from './candles.service';
 
 @Module({
+  // Адаптер экспортируется из CoinGeckoModule. Без import Nest его сюда не отдаст.
+  imports: [CoinGeckoModule],
   controllers: [CandlesController],
   providers: [CandlesService, CandlesRepository],
 })

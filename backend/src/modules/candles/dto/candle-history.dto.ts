@@ -4,7 +4,8 @@
  * Карта файлов — ../candles.module.ts.
  *
  * Тикет 03: items часто [] (seed без свечей). Тикет 04: items — окно, ASC по openTime.
- * Собирает контроллер: Record → CandleDto; stale в B2 всегда false.
+ * Собирает контроллер: Record → CandleDto.
+ * stale: true — Source breaker open, items всё равно из PostgreSQL.
  * type задаём явно: openapi:export через tsx без emitDecoratorMetadata.
  */
 import { ApiProperty } from '@nestjs/swagger';
@@ -24,6 +25,12 @@ export class CandleHistoryDto {
   })
   items!: CandleDto[];
 
-  @ApiProperty({ example: false, type: Boolean })
+  @ApiProperty({
+    example: false,
+    type: Boolean,
+    description:
+      // В OpenAPI фиксируем связь stale с breaker Source, а не с пустотой истории.
+      'True when the Source circuit breaker is open. Items are still read from storage.',
+  })
   stale!: boolean;
 }

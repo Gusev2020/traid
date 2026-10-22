@@ -4,8 +4,8 @@
  * Зачем: в сервисах писать config.get('coingecko.baseUrl'), а не копаться
  * в process.env. Проверку «URL вообще есть?» делает validateEnv до этого.
  *
- * syncIntervalMs — как часто потом будет крутиться Sync (тикет 04).
- * Сейчас крон ещё не подключён, поле просто лежит в конфиге.
+ * syncIntervalMs — как часто CandleSyncScheduler зовёт тик.
+ * Берётся из CANDLE_SYNC_INTERVAL_MS, по умолчанию 60 секунд.
  */
 import { registerAs } from '@nestjs/config';
 

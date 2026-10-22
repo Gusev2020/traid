@@ -8,6 +8,7 @@
  *   4. HealthCheckService.check() запускает массив индикаторов параллельно
  *   5. Каждый индикатор возвращает { key: { status: 'up' | 'down' } }
  *   6. Если хотя бы один 'down' → HTTP 503, иначе HTTP 200 { status: 'ok' }
+ *   Source при open breaker не down: status up и state degraded, HTTP 200.
  */
 import { Controller, Get } from '@nestjs/common';
 import {
@@ -17,6 +18,7 @@ import {
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaHealthIndicator } from './prisma-health.indicator';
+import { SourceHealthIndicator } from './source-health.indicator';
 
 // Имена short/medium/long обязательны: голый @SkipThrottle() в v6 скипает только default.
 @SkipThrottle({ short: true, medium: true, long: true })
@@ -26,6 +28,7 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly prismaIndicator: PrismaHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
+    private readonly sourceIndicator: SourceHealthIndicator,
   ) {}
 
   @Get()
@@ -35,7 +38,10 @@ export class HealthController {
       // Индикатор 1: Postgres доступен? (SELECT 1 с таймаутом 1.5 сек)
       () => this.prismaIndicator.pingCheck('database', { timeout: 1500 }),
 
-      // Индикатор 2: heap памяти Node.js < 300 МБ?
+      // Source: breaker open → state degraded, процесс не рестартим.
+      () => this.sourceIndicator.isHealthy('coingecko'),
+
+      // Heap памяти Node.js < 300 МБ?
       // Если процесс «течёт» — health упадёт, оркестратор перезапустит pod.
       () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
     ]);

@@ -6,7 +6,8 @@
  *   нет Symbol → SymbolNotFoundError (SYMBOL_NOT_FOUND, не NOTFOUND)
  *   Symbol есть, свечей нет → пустой items, не not-found
  *   isActive не фильтруем: неактивный Symbol обслуживается как активный
- *   stale всегда false, пока нет синка с CoinGecko (B3)
+ *   stale = открыт ли предохранитель Source (тикет 03).
+ *   Сам GET в CoinGecko не ходит: флаг уже лежит в памяти адаптера.
  *
  * Тикет 04 — окно:
  *   from/to по openTime включительно; без дат — хвост из limit, ответ ASC
@@ -27,6 +28,7 @@ import {
   InvalidCandleRangeError,
   SymbolNotFoundError,
 } from '../../common/errors/domain.error';
+import { CoinGeckoAdapter } from '../../integrations/coingecko/coingecko.adapter';
 import { CandleRecord } from './candle.record';
 import { CandlesRepository } from './candles.repository';
 
@@ -43,7 +45,11 @@ const DEFAULT_HISTORY_LIMIT = 500;
 
 @Injectable()
 export class CandlesService {
-  constructor(private readonly candles: CandlesRepository) {}
+  constructor(
+    private readonly candles: CandlesRepository,
+    // Читаем состояние circuit breaker Source. Загрузка OHLC — работа Candle Sync.
+    private readonly source: CoinGeckoAdapter,
+  ) {}
 
   /**
    * Тикеты 03–04: резолв ticker → окно истории (пусто = []).
@@ -85,7 +91,9 @@ export class CandlesService {
       symbol: query.symbol,
       interval: query.interval,
       items: this.applyWindow(items, window),
-      stale: false,
+      // stale отражает открытый circuit breaker, а не возраст свечей:
+      // при закрытом breaker даже пустая или давняя история имеет stale=false.
+      stale: this.source.isCircuitOpen(),
     };
   }
 
