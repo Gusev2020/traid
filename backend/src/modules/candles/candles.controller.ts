@@ -11,7 +11,7 @@
  *   3. CandlesService резолвит Symbol в репозитории свечей (usd);
  *      нет строки → SymbolNotFoundError → AllExceptionsFilter → 404
  *      from позже to → InvalidCandleRangeError → 400
- *   4. toDto() на каждый CandleRecord → items; stale уже false
+ *   4. toDto() на каждый CandleRecord → items; stale = breaker open
  *   5. 200 + CandleHistoryDto { symbol, interval, items, stale } — канон §7.1
  *
  * Цепочка при GET /api/v1/candles/latest (тикет 05):

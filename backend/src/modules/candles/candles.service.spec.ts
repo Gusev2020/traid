@@ -6,8 +6,11 @@
  * Репозиторий замокан, как health-тесты B1 мокают индикаторы.
  * HTTP-коды здесь не проверяем — сервис их не знает.
  * Мок отдаёт полный набор свечей; окно применяет сервис.
+ * Второй аргумент serviceWith — открыт ли breaker. По умолчанию закрыт,
+ * поэтому старые проверки окна по-прежнему ждут stale: false.
  */
 import { CandleInterval } from '@prisma/client';
+import { CoinGeckoAdapter } from '../../integrations/coingecko/coingecko.adapter';
 import { CandleRecord } from './candle.record';
 import { CandlesRepository } from './candles.repository';
 import { CandlesService } from './candles.service';
@@ -32,12 +35,20 @@ function candle(
   };
 }
 
-function serviceWith(items: CandleRecord[]): CandlesService {
+function serviceWith(
+  items: CandleRecord[],
+  circuitOpen = false,
+): CandlesService {
   const candles = {
     findSymbolIdByTicker: jest.fn().mockResolvedValue(1),
     findHistory: jest.fn().mockResolvedValue(items),
   };
-  return new CandlesService(candles as unknown as CandlesRepository);
+  // circuitOpen = true только в тесте «биржа лежит, свечи всё равно отдаём».
+  const source = { isCircuitOpen: () => circuitOpen };
+  return new CandlesService(
+    candles as unknown as CandlesRepository,
+    source as unknown as CoinGeckoAdapter,
+  );
 }
 
 describe('CandlesService', () => {
@@ -52,6 +63,18 @@ describe('CandlesService', () => {
       items: [],
       stale: false,
     });
+  });
+
+  it('marks history stale when the Source breaker is open and still returns stored candles', async () => {
+    const service = serviceWith([candle(T1)], true);
+
+    const history = await service.getHistory({
+      symbol: 'BTC',
+      interval: CandleInterval.H4,
+    });
+
+    expect(history.stale).toBe(true);
+    expect(history.items).toHaveLength(1);
   });
 
   it('includes candles on from and to bounds and drops those outside', async () => {

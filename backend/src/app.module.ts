@@ -6,7 +6,8 @@
  * модулей, которые от них зависят.
  *
  * B3 тикет 01: ThrottlerModule + глобальный AppThrottlerGuard.
- * B3 тикет 02: CoinGeckoModule — переводчик свечей из Source. Крон Sync — тикет 04.
+ * B3 тикет 02: CoinGeckoModule — переводчик свечей из Source.
+ * B3 тикет 04: CandleSyncModule — таймер, который эти свечи пишет в базу.
  *   B4 → AuthModule, CandlesGateway (WebSocket); @Throttle на login
  */
 import { Module } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { AppThrottlerGuard } from './common/throttler/app-throttler.guard';
 import { AppConfigModule } from './config/config.module';
 import { loggerModule } from './config/logger.module';
 import { CoinGeckoModule } from './integrations/coingecko/coingecko.module';
+import { CandleSyncModule } from './modules/candles/candle-sync.module';
 import { CandlesModule } from './modules/candles/candles.module';
 import { HealthModule } from './modules/health/health.module';
 import { SymbolsModule } from './modules/symbols/symbols.module';
@@ -39,6 +41,7 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule, // 4. Подключение к Postgres (@Global — доступен везде)
     CoinGeckoModule, // 5. Переводчик CoinGecko → свечи (кэш, HTTP, предохранитель)
+    CandleSyncModule, // B3 тикет 04: раз в минуту пишет свечи Active Symbol в Postgres
     HealthModule, // 6. GET /health — проверка, что приложение и БД живы
     SymbolsModule, // 7. B2: GET /symbols, GET /symbols/:ticker
     CandlesModule, // 8. B2: GET /candles (03–04) и GET /candles/latest (05)
